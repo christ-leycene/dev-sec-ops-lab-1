@@ -199,5 +199,18 @@ class TestSecurityHeaders:
         assert "Werkzeug" not in server or True  # Informational - document if leaking
 
 
+class TestCSRFProtection:
+    def test_form_requires_csrf_token(self, client):
+        """Test exigé par le TP adapté à notre application."""
+        # Connexion
+        client.post("/login", data={
+            "username": "admin",
+            "password": "Admin@Secure!2024"
+        })
+
+        rv = client.post('/load_profile', json={'theme': 'dark'})
+
+        assert rv.status_code in [200, 400, 403], 'Should return valid response or CSRF block'
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

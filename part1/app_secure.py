@@ -7,6 +7,7 @@ Demonstrates security best practices.
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify, abort
 import sqlite3
 import os
+import subprocess
 import hashlib
 import hmac
 import secrets
@@ -14,10 +15,16 @@ import re
 import logging
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-
 # ─── App Configuration ────────────────────────────────────────────────────────
-app = Flask(__name__)
 
+# On essaie de trouver le dossier templates standard
+current_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(current_dir, "templates")
+
+if not os.path.exists(template_dir):
+    template_dir = os.path.join(os.path.dirname(current_dir), "session1", "templates")
+
+app = Flask(__name__, template_folder=template_dir)
 # FIX 1: Secret key loaded from environment variable, never hardcoded
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -131,7 +138,7 @@ def dashboard():
 @login_required
 def search():
     query = request.args.get("q", "")
-    # Jinja2 auto-escaping handles XSS - just pass to template
+    query = re.sub(r'(?i)javascript:', '', query)
     return render_template("search.html", query=query)
 
 
@@ -140,7 +147,7 @@ def search():
 @login_required
 @admin_required
 def ping():
-    import subprocess
+    
     host = request.args.get("host", "")
     if not validate_host(host):
         return jsonify({"error": "Host not in allowlist"}), 400
